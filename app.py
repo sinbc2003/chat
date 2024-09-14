@@ -9,86 +9,58 @@ load_dotenv()
 # Set up OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def generate_response(prompt):
+def generate_response(prompt, model):
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model=model,
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
     except Exception as e:
         return str(e)
 
-# Custom CSS to push content to the top and input to the bottom
-st.markdown("""
-    <style>
-        .reportview-container {
-            flex-direction: column-reverse;
-        }
-        .main .block-container {
-            padding-top: 1rem;
-            padding-bottom: 10rem;
-            max-width: 46rem;
-        }
-        .stTextInput {
-            position: fixed;
-            bottom: 3rem;
-            left: 0;
-            right: 0;
-            background-color: white;
-            padding: 1rem;
-            z-index: 1000;
-        }
-        .stButton {
-            position: fixed;
-            bottom: 0.5rem;
-            right: 1rem;
-            z-index: 1001;
-        }
-    </style>
-""", unsafe_allow_html=True)
+def render_latex(text):
+    # This function would handle LaTeX rendering if needed
+    st.markdown(text)
 
-st.title("GPT-3.5 Chatbot")
-
-# Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# Display chat messages from history on app rerun
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# Create a container for the chat history
-chat_container = st.container()
-
-# Create a container for the input field and button
-input_container = st.container()
-
-# Use the input container for the text input and button
-with input_container:
-    prompt = st.text_input("What is your question?", key="user_input")
-    send_button = st.button("Send")
-
-# React to user input
-if send_button and prompt:
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": prompt})
+def chat_page():
+    st.set_page_config(layout="wide")
     
-    # Generate response
-    response = generate_response(prompt)
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.title("AI Assistant와의 대화")
+    with col2:
+        st.image("https://via.placeholder.com/100", width=100)  # Placeholder for profile image
     
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    st.write("AI Assistant와 대화를 나누어보세요.")
     
-    # Clear the input box after sending
-    st.session_state.user_input = ""
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+        st.session_state.messages.append({"role": "assistant", "type": "text", "content": "안녕하세요! 어떤 도움이 필요하신가요?"})
 
-# Display updated chat history
-with chat_container:
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    model = st.selectbox("모델 선택", ["gpt-3.5-turbo", "gpt-4"])
+    
+    chat_container = st.container()
+    
+    with chat_container:
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                if message["type"] == "text":
+                    render_latex(message["content"])
+    
+    if prompt := st.chat_input("메시지를 입력하세요"):
+        st.session_state.messages.append({"role": "user", "type": "text", "content": prompt})
+        with st.chat_message("user"):
+            render_latex(prompt)
+        
+        with st.chat_message("assistant"):
+            message_placeholder = st.empty()
+            full_response = generate_response(prompt, model)
+            message_placeholder.markdown(full_response)
+        
+        st.session_state.messages.append({"role": "assistant", "type": "text", "content": full_response})
+        
+        st.experimental_rerun()
 
-# Force a rerun to update the chat history display
-st.experimental_rerun()
+if __name__ == "__main__":
+    chat_page()
