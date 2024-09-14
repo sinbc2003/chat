@@ -19,6 +19,35 @@ def generate_response(prompt):
     except Exception as e:
         return str(e)
 
+# Custom CSS to push content to the top and input to the bottom
+st.markdown("""
+    <style>
+        .reportview-container {
+            flex-direction: column-reverse;
+        }
+        .main .block-container {
+            padding-top: 1rem;
+            padding-bottom: 10rem;
+            max-width: 46rem;
+        }
+        .stTextInput {
+            position: fixed;
+            bottom: 3rem;
+            left: 0;
+            right: 0;
+            background-color: white;
+            padding: 1rem;
+            z-index: 1000;
+        }
+        .stButton {
+            position: fixed;
+            bottom: 0.5rem;
+            right: 1rem;
+            z-index: 1001;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("GPT-3.5 Chatbot")
 
 # Initialize chat history
@@ -30,23 +59,36 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Accept user input
-prompt = st.text_input("What is your question?", key="user_input")
+# Create a container for the chat history
+chat_container = st.container()
+
+# Create a container for the input field and button
+input_container = st.container()
+
+# Use the input container for the text input and button
+with input_container:
+    prompt = st.text_input("What is your question?", key="user_input")
+    send_button = st.button("Send")
 
 # React to user input
-if st.button("Send"):
-    if prompt:
-        # Display user message in chat message container
-        st.chat_message("user").markdown(prompt)
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
+if send_button and prompt:
+    # Add user message to chat history
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    # Generate response
+    response = generate_response(prompt)
+    
+    # Add assistant response to chat history
+    st.session_state.messages.append({"role": "assistant", "content": response})
+    
+    # Clear the input box after sending
+    st.session_state.user_input = ""
 
-        response = generate_response(prompt)
-        # Display assistant response in chat message container
-        with st.chat_message("assistant"):
-            st.markdown(response)
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
+# Display updated chat history
+with chat_container:
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
 
-        # Clear the input box after sending
-        st.session_state.user_input = ""
+# Force a rerun to update the chat history display
+st.experimental_rerun()
